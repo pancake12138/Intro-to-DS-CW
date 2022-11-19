@@ -1,0 +1,86 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+title: 
+author: 
+date:
+geometry: margin=2cm
+output:
+  pdf_document: default
+classoption: twocolumn
+---
+
+```{r, echo=FALSE}
+options(warn=-1)
+options(dplyr.summarise.inform = FALSE)
+```
+
+```{r, echo=FALSE}
+#suppressPackageStartupMessages(library(dplyr))
+#suppressPackageStartupMessages(library(reshape))
+#suppressPackageStartupMessages(library(ggplot2))
+#suppressPackageStartupMessages(library(gridExtra))
+#suppressPackageStartupMessages(library(grid))
+#suppressPackageStartupMessages(library(ggpubr))
+#suppressPackageStartupMessages(library(gridtext))
+#suppressPackageStartupMessages(library(tidyverse))
+```
+
+```{r, echo=FALSE, results='hide'}
+# Import the data
+dayData <- read.csv(file = "C:\\Users\\letai\\OneDrive\\Työpöytä\\UCL masters\\Introduction to statistical data science\\day.csv")
+hourData <- read.csv(file = "C:\\Users\\letai\\OneDrive\\Työpöytä\\UCL masters\\Introduction to statistical data science\\hour.csv")
+head(dayData[c("instant","dteday","season","cnt")])
+head(hourData[c("instant","dteday","season","hr","cnt")])
+```
+
+## 7 A Seasonal-Demand Comparison: Spring versus Summer
+
+```{r, echo=FALSE}
+# Make DataFrame, re-factor and filter
+df_dayData <- data.frame(dayData)
+df_dayData$season <- as.factor(dayData$season)
+levels(df_dayData$season) <- c("Winter", "Spring","Summer","Fall")
+df_dayData <- df_dayData[c("season","yr","cnt","workingday")] %>% filter(season %in% c("Spring","Summer"))
+# Change density plot fill colors by groups
+ggplot(df_dayData, aes(x=cnt, fill=season)) +
+  geom_density(alpha=0.3) + scale_fill_manual(values=c("olivedrab","darkorange")) + 
+  labs(title = bold("Distribution of Daily Total Counts")~" ", 
+       subtitle = italic("Days in Spring and Summer (2011 and 2012)")~" ", 
+       x = "Total Daily Count", y ="Desnity")
+```
+
+We decided to combine the data together from the year 2011 and 2012 to form a single distribution per season as we decided that this would give us more data per season and hence enable any conclusions we draw from the data to be less biased by yearly trends in demand.
+
+To examine whether the distributions for Spring and Summer have the same distribution, we propose to use the Lilliefors and the Kolmogorov-Smirnov tests respectively. Let us first introduce these two tests formally.
+
+### 7.1 An Introduction and Comparison of Tests
+####7.1.1 Mann-Whitney U test
+The Mann-Whitney U test is a non-parametric test seeking to test whether two samples are from the same distribution with the intuition that if the probability of a given data point from either sample being greater than from the other is approximately equal to each other.
+
+The test statistic of the Mann-Whitney U test is as follows:
+
+#Test statistic
+
+The null hypothesis of the test would be that the probabilities of a data point from either sample being larger than a data point from the other sample is equal to each other. The alternative hypothesis would be that the probabilities are different.
+
+
+#### 7.1.2 Kolmogorov-Smirnov test
+The (two-sample) Kolmogorov-Smirnov test is a nonparametric test that can be used to to compare the cumulative distributions of two data sets[1]. 
+
+The Kolmogorov-Smirnov statistic formalizes a notion of distance between the empirical distribution functions of two samples. Intuitively, the test will conclude that the samples are drawn from the same distribution if the absolute difference between all x values is not over some threshold.
+
+# decide which representation of the test statistic for K-S test formula to add here
+
+The null hypothesis is that the two samples are drawn from the same distribution and alternative hypothesis under the test is that the samples are drawn from another distribution. 
+
+### References
+[1]https://www.graphpad.com/guides/prism/latest/statistics/interpreting_results_kolmogorov-smirnov_test.htm
+
+
+
+
+
+
