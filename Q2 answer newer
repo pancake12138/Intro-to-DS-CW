@@ -1,0 +1,189 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+title: 
+author: 
+date:
+geometry: margin=2cm
+output:
+  pdf_document: default
+classoption: twocolumn
+---
+
+```{r, echo=FALSE}
+options(warn=-1)
+options(dplyr.summarise.inform = FALSE)
+```
+
+```{r, echo=FALSE}
+#suppressPackageStartupMessages(library(dplyr))
+#install.packages(ggplot)
+#suppressPackageStartupMessages(library(reshape))
+#suppressPackageStartupMessages(library(ggplot))
+#suppressPackageStartupMessages(library(gridExtra))
+#suppressPackageStartupMessages(library(grid))
+#suppressPackageStartupMessages(library(ggpubr))
+#suppressPackageStartupMessages(library(gridtext))
+#suppressPackageStartupMessages(library(tidyverse))
+```
+
+```{r, echo=FALSE, results='hide'}
+# Import the data
+dayData <- read.csv(file = "C:\\Users\\letai\\OneDrive\\Työpöytä\\UCL masters\\Introduction to statistical data science\\day.csv")
+hourData <- read.csv(file = "C:\\Users\\letai\\OneDrive\\Työpöytä\\UCL masters\\Introduction to statistical data science\\hour.csv")
+head(dayData[c("instant","dteday","season","cnt")])
+head(hourData[c("instant","dteday","season","hr","cnt")])
+```
+
+## 7 A Seasonal-Demand Comparison: Spring versus Summer
+
+```{r, echo=FALSE}
+# Make DataFrame, re-factor and filter
+df_dayData <- data.frame(dayData)
+df_dayData$season <- as.factor(dayData$season)
+levels(df_dayData$season) <- c("Winter", "Spring","Summer","Fall")
+df_dayData <- df_dayData[c("season","yr","cnt","workingday")] $>$ filter(season $in$ c("Spring","Summer"))
+# Change density plot fill colors by groups
+ggplot(df_dayData, aes(x=cnt, fill=season)) +
+  geom_density(alpha=0.3) + scale_fill_manual(values=c("olivedrab","darkorange")) + 
+  labs(title = bold("Distribution of Daily Total Counts")~" ", 
+       subtitle = italic("Days in Spring and Summer (2011 and 2012)")~" ", 
+       x = "Total Daily Count", y ="Desnity")
+```
+
+We decided to combine the data together from the year 2011 and 2012 to form a single distribution per season as we decided that this would give us more data per season and hence enable any conclusions we draw from the data to be less biased by yearly trends in demand.
+
+To examine whether the distributions for Spring and Summer have the same distribution, we propose to use the Lilliefors and the Kolmogorov-Smirnov tests respectively. Let us first introduce these two tests formally and then discuss the appropriateness of the choices.
+
+### 7.1 An Introduction and Comparison of Tests
+####7.1.1 Mann-Whitney U test
+The Mann-Whitney U test is a non-parametric test seeking to test whether two samples are from the same distribution with the intuition that if the probability of a given data point from either sample being greater than from the other is approximately equal to each other.
+
+The test statistic of the Mann-Whitney U test is as follows:
+
+#Test statistic
+
+The null hypothesis of the test would be that the probabilities of a data point from either sample being larger than a data point from the other sample is equal to each other. The alternative hypothesis would be that the probabilities are different.
+
+
+#### 7.1.2 Lilliefors test
+The Lilliefors test (two-sample) is an extension of the Kolmogorov-Smirnov test that uses a different test statistic. The Lilliefors test is a nonparametric test that can be used to compare the cumulative distributions of two data sets[1]. 
+
+The Lilliefors test statistic formalizes a notion of distance between the empirical distribution functions of two samples. Intuitively, the test will conclude that the samples are drawn from the same distribution if the absolute difference between all x values is not over some threshold.
+
+# decide which representation of the test statistic for Lilliefors test formula to add here
+
+The null hypothesis is that the two samples are drawn from the same distribution and alternative hypothesis under the test is that the samples are drawn from another distribution. 
+
+### 7.1.3 Pearson's Chi-Square two-sample test
+The idea of the Pearson's Chi-Square two-sample test is to test whether two samples are from the same distribution by transforming the random variables into common intervals. The intuition behind the test is that if the two samples are from the same distribution the number of observations falling into each interval should roughly be the same[2]
+
+The null hypothesis is again that the two samples are drawn from the same distribution.
+
+On the other hand, the alternative hypothesis would be that the two samples are drawn from different distributions.
+
+The test statistic of the chi-square two sample test, with k "bins" is defined as
+
+#insert the test statistic from source
+
+###Two sample t-test
+
+### Results of the two tests
+#### Mann-Whitney U test
+```{r, echo=FALSE}
+ks.test(x=df_dayData, y, …,
+        alternative = c("two.sided", "less", "greater"),
+        exact = NULL, tol=1e-8, simulate.p.value=FALSE, B=2000)
+
+```
+
+#### Chi-squared two-sample test
+```{r, echo=FALSE}
+counts=summary(df_dayData$cnt)
+dat <- within(counts, {   
+  counts.cat <- NA # need to initialize variable
+  counts.cat[counts < 500] <- int1
+  counts.cat[counts >= 500 & counts < 1000] <- int2
+  counts.cat[counts >= 1000 & counts < 1500] <- int3
+  counts.cat[counts >= 1500 & counts < 2000] <- int4
+  counts.cat[counts >= 2000 & counts < 2500] <- int5
+  counts.cat[counts >= 3000 & counts < 3500] <- int6
+  counts.cat[counts >= 3500 & counts < 4000] <- int7
+  counts.cat[counts >= 4000 & counts < 4500] <- int8
+  counts.cat[counts >= 4500 & counts < 5000] <- int9
+  counts.cat[counts >= 5000 & counts < 5500] <- int10
+  counts.cat[counts >= 5500 & counts < 6000] <- int11
+  counts.cat[counts >= 6000 & counts < 6500] <- int12
+  counts.cat[counts >= 6500 & counts < 7000] <- int13
+  counts.cat[counts >= 7000 & counts < 7500] <- int14
+  counts.cat[counts >= 7500 & counts < 8000]
+<- int15
+  counts.cat[counts >= 8000 & counts < 8500]
+<- int16
+  counts.cat[counts >= 8500 & counts < 9000]
+<- int17
+   } )
+
+```
+
+```{r, echo=FALSE}
+spring=df_dayData$season="Spring"
+print(spring)
+summer=df_dayData$season="Summer"
+print(summer)
+
+df_dayData <- data.frame(dayData)
+df_dayData$season <- as.factor(dayData$season)
+levels(df_dayData$season) <- c("Winter", "Spring","Summer","Fall")
+
+df_summer <- df_dayData[c("season","yr","cnt","workingday")] %>% filter(season $in$ c("Summer"))
+df_spring <- df_dayData[c("season","yr","cnt","workingday")] %>% filter(season $in$ c("Spring"))
+```
+
+### two sample t-test
+Given that an assumption of the two sample t-test is that the two samples should have equal variances. We tested for this and obtained that the ratio of variances is smaller than the required threshold. Thus, we may assume that the two samples have equal variances.
+
+Given the assumption of equal variances is satisfied, we can perform the formal test and obtain the following results.
+
+test statistic: 2.963210413597731e-15 %~~% 0
+
+the corresponding p-value is 0.9999999999999976%~~% > $\alpha$ =0.05
+
+Thus, on a 5% confidence level, we don't have enough evidence to reject the null-hypothesis and thus conclude that the two samples are drawn from the same distribution. 
+
+##Lillieford's test
+```{r, echo=FALSE}
+df_dayData <- data.frame(dayData)
+df_dayData$season <- as.factor(dayData$season)
+levels(df_dayData$season) <- c("Winter", "Spring","Summer","Fall")
+spring<-df_dayData$season="Spring"
+print(spring)
+summer<-df_dayData$season="Summer"
+print(summer)
+
+#df[with(df, sentId %in% sentId[inds] & partner %in% partner[inds]), ]
+
+
+```
+
+
+### An inquiry into the similarities and differences in the assumptions of the two tests
+
+#The two tests are relatively similar to each other in terms of assumptions. Firstly, both tests assume that the observations from both groups are independent of each other. This assumption seems reasonable given the demand for bikes in the spring should not affect demand for bikes in the summer. 
+
+We decided to use two-sample t-test and the Lillieford's test. The two tests have a number of differences in their assumptions. the t-tests doesn't require the two sample sizes to be equal, whereas the Lillieford's test does require equal sizes. 
+
+
+### Conclusion
+
+Our analysis concluded that 
+
+
+### References
+[1]https://www.graphpad.com/guides/prism/latest/statistics/interpreting_results_kolmogorov-smirnov_test.htm
+
+https://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/chi2samp.htm
+
+https://www.statisticshowto.com/lilliefors-test/
