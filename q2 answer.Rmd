@@ -67,7 +67,7 @@ The test statistic of the Mann-Whitney U test is as follows:
 The null hypothesis of the test would be that the probabilities of a data point from either sample being larger than a data point from the other sample is equal to each other. The alternative hypothesis would be that the probabilities are different.
 
 
-#### 7.1.2 Kolmogorov-Smirnov test
+#### 7.1.2 Lilliefors test
 The (two-sample) Kolmogorov-Smirnov test is a nonparametric test that can be used to to compare the cumulative distributions of two data sets[1]. 
 
 The Kolmogorov-Smirnov statistic formalizes a notion of distance between the empirical distribution functions of two samples. Intuitively, the test will conclude that the samples are drawn from the same distribution if the absolute difference between all x values is not over some threshold.
