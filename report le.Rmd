@@ -1,0 +1,455 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+--
+title: 
+author:
+date:
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+geometry: margin=1cm
+classoption: twocolumn
+---
+
+```{r, echo=FALSE}
+options(warn=-1)
+options(dplyr.summarise.inform = FALSE)
+```
+
+```{r, echo=FALSE}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(reshape))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(gridExtra))
+suppressPackageStartupMessages(library(grid))
+suppressPackageStartupMessages(library(ggpubr))
+suppressPackageStartupMessages(library(gridtext))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(nortest))
+suppressPackageStartupMessages(library(pander))
+```
+
+```{r, echo=FALSE, results='hide'}
+# Import the data
+dayData <- read.csv(file = 'day.csv')
+hourData <- read.csv(file = 'hour.csv')
+head(dayData[c("instant","dteday","season","cnt")])
+head(hourData[c("instant","dteday","season","hr","cnt")])
+```
+
+## 1 Introduction
+
+At the time of completing this project (November 2022), it is common-knowledge that the UK is facing both an energy and a cost of living crisis. 
+
+Increased energy demand in the UK post-Covid has been compounded by the reduction in gas supplies coming into Europe [1]. Moreover, it was found for data collected as recently as last month, that 93% of adults in Great Britain reported an increase in their cost of living compared with a year ago [2]. 
+
+Promoted usage of alternative modes of transport such as cycling, therefore, present a unique opportunity for the UK to tackle both crises simultaneously. As a result, bike-sharing schemes, e.g., Santander Cycles (Transport for London, or TFL), have become more important than ever before. Hence, TFL and services alike, must ensure their schemes are managed effectively. A specific and important example of effective management, would be for TFL to better **understand bike-hiring demand during peak commuting hours in the evening**. Developing this understanding will be the focus of this project. 
+
+## 2 Dataset
+
+For this project, we will use data from the *Capital Bikeshare scheme in Washington D.C* between the years 2011 and 2012. The dataset contains the hourly and daily count of rental bikes during the aforementioned period. We anticipate that the findings from the Washington D.C bikeshare dataset will generalise to the London bike-sharing scheme operated by TFL. That is, we assume external validity. 
+
+In our case, we will only use the hourly counts data. Further, we will use only some of the available features. Below, you can see the head of the hourly count dataset which we will use. Throughout this report, we will largely focus on the `cnt` (count) variable.
+
+```{r, echo=FALSE}
+df_hourData <- data.frame(hourData)
+df_hourData$season <- as.factor(hourData$season)
+levels(df_hourData$season) <- c("Winter", "Spring","Summer","Fall")
+df_hourData <- df_hourData[c("dteday","season","yr","hr", "workingday","cnt")]
+head(df_hourData)
+```
+
+## 3 Plan of action
+
+Recall, the focus of this project is to try to understand bike-hiring demand during **peak commuting hours in the evening**. For this report, we will look at these evening peak commuting times for only Spring and Summer. In order to develop this understanding, we will divide our report into two parts, focusing on two separate but related questions of interest. 
+
+For the first part, we will study the distribution of the evening peak commuting times for Spring and Summer. An important question for us to answer here is *whether the distributions for Spring and Summer are normally distributed?*
+
+Furthermore, the second part will naturally follow on from the first as we study how bike-usage differs during Spring and Summer. The important question for us to answer here is *whether or not the distributions for Spring and Summer are the same or whether they differ?*  
+
+With that said, let's now move on to discussing the tests which we will be using in Sections 6 and 7.
+
+## 4 Description of the goodness-of-fit tests
+
+Goodness of fit (GOF) tests describe how well a statistical model fits a set of observations. We will discuss three such tests. 
+
+### 4.1 Q-Q plots
+
+The first GOF-test we will use, is the **Quantile-Quantile plot**. Q-Q plots provide a graphical assessment of GOF [3]. Please note, here we assume here that the reader has some knowledge of their construction and interpretation. 
+
+```{r, echo=FALSE}
+# #define data
+# set.seed(1)
+# x <- rbeta(250,2,5)
+# par(mfrow = c(1, 2))
+# 
+# #create histogram
+# hist_data <- hist(x, main="Beta(2,5) distribution with\nNormal PDF superimposed", breaks=30)
+# 
+# #define x and y values to use for normal curve
+# x_values <- seq(min(x), max(x), length = 100)
+# y_values <- dnorm(x_values, mean = mean(x), sd = sd(x)) 
+# y_values <- y_values * diff(hist_data$mids[1:2]) * length(x) 
+# 
+# # Overlay normal curve on histogram
+# lines(x_values, y_values, lwd = 2, col="red")
+# 
+# # Normal plot
+# qqnorm(x, pch = 1, frame = FALSE)
+# qqline(x, col = "red", lwd = 2)
+# 
+# arrows(x0=-2, y0=0.22, x1 = -2, y1 = 0.1)
+# text(-2, 0.3, 'indicates\nskewness')
+```
+
+In our case, (in Section 6) we will use the *Normal* Q-Q plot. Their advantage is that they allow us to quickly identify deviations from the normal distribution. It should be noted, however, that Q-Q plots do not give rise to a numerical summary statistic as do other GOF tests - like the ones we discuss next. 
+
+### 4.2 Shapiro-Wilk test
+
+For our second GOF-test, we consider the formal Shapiro-Wilk test used to check whether a sample comes from a population that is normally distributed. The null hypothesis is: 
+
+\begin{center}
+$H_{0}:$ the sample $x_{1},x_{2},..,x_{n}$ is normally distributed. 
+\end{center}
+
+For a given level of significance $\alpha$, the test statistic is,
+
+$$W=\frac{(\sum_{i=1}^{n} a_{i}x_{(i)})^2}{\sum_{i=1}^{n} (x_{i}-\bar{x})^2}$$.
+
+which has coefficients $a_{i}$ given by,
+
+$$(a_{1},...,a_{n})=\frac{m^{T}V^{-1}}{\lVert V^{-1}m \rVert}$$
+
+In the above, $x_{(i)}$ is the $i^{th}$ order statistic. The vector $m = (m_{1},..,m_{n})^T$, is made up from the expected values of the order statistics of i.i.d random variables sampled from the standard normal distribution $N(0,1)$. Lastly, the matrix $V$ is the covariance matrix of those normal order statistics [4].
+
+There is no known distribution for the test statistic $W$. However, we do have an intuition for $W$. Namely, the test statistic $W$ is basically a measure of how well the ordered (and standardized) sample quantiles fit to the standard normal quantiles. Hence, $W$ takes on values in the interval $[0,1]$ with 1 corresponding to a perfect fit [5]. Under the null hypothesis $H_{0}$, therefore, we expect $W$ to be close to 1. Thus, we are more likely to reject the null hypothesis $H_{0}$, for smaller values of $W$.
+
+An advantage of the Shapiro-Wilk test, is that it is the most powerful normality test [6]. Although, Shapiro-Wilk is often considered to more suitable for smaller sample sizes $n<50$ [7].
+
+### 4.3 Anderson-Darling test
+
+The final GOF-test we will use is the Anderson-Darling test, which can be used to test whether a sample came from a specified distribution. In our case, we will test whether samples came from the normal distribution. Therefore, the null hypothesis is: 
+
+\begin{center}
+$H_{0}:$ the sample $x_{1},x_{2},..,x_{n}$ is normally distributed. 
+\end{center}
+
+(This is the same null hypothesis as for Shapiro-Wilk) Furthermore, for a given level of significance $\alpha$, the test statistic is,
+
+$$A^2 = -n - \sum_{i=1}^n \frac{2i-1}{n} [ln(\Phi (y_{(i)})) + ln(1 - \Phi (y_{(n+1-i)}) ]$$
+
+where $y_{(i)}$ is the **standardized** $i^{th}$ order statistic (i.e. $y_{(i)} = \frac{x_{(i)} - \hat{\mu}}{\hat{\sigma}}$), and $\Phi$ is the CDF for the standard normal distribution. 
+
+Under the null hypothesis $H_{0}$, we expect the test statistic $A^2$ to take on smaller values. Hence, we are more likely to reject the null hypothesis $H_{0}$ for larger values of $A^2$. 
+
+Anderson-Darling is a modification of the Kolmogorov-Smirnov (K-S) test, which gives more weight to the tails of the sample than the K-S test [8]. Hence, the test is more sensitive to departures from from normality in the tails - this is the main advantage of the Anderson-Darling test. However, the test has lower power than Shapiro-Wilk [6]. 
+
+## 5 Description of the two-sample tests
+
+Two-sample tests are used to determine whether the difference between two samples of data is statistically significant.
+
+### 5.1 Kolmogorov-Smirnov two-sample test
+
+The first test we will use is the Kolmogorov-Smirnov (K-S) two-sample test, which is used to test whether the underlying probability distributions for two samples differ. The null hypothesis is:
+
+\begin{center}
+$H_{0}:$ both samples $x_{1},x_{2},..,x_{n}$ and $y_{1},y_{2},..,y_{m}$ come from the same distribution
+\end{center}
+
+For a given level of significance $\alpha$, the test statistic is,
+
+$$D_{n,m} = \sup_{x\in X} \lvert F_{1,n}(x) -  F_{2,m}(x)\rvert$$
+where $F_{1,n}$ and $F_{2,m}$ are the empirical distribution functions of the first and the second sample respectively.
+
+Intuitively, the test statistic takes the largest absolute difference between the two empirical distribution functions (EDF), across all $x$ values [9]. Therefore, as you might expect, under the null hypothesis $H_{0}$ we expect the test statistic $D_{n,m}$ to be small, i.e. if $H_{0}$ is true, both samples come from the same distribution and we expect the largest absolute difference between the two EDFs to be small. Conversely, we are more likely to reject the null hypothesis when the test statistic $D_{n,m}$ is larger. 
+
+An advantage of the K-S two-sample test is that it is a nonparametric test, that is, we do not need to rely on the validity of any assumptions when carrying out the test. In addition to being nonparametric, another key advantage of the K-S test is that the test is devised to be sensitive to any types of differences between two distribution functions $F_{1,n}$ and $F_{2,m}$; for example, differences in shape, spread or median [9]. 
+
+### 5.2 Mann-Whitney U test
+
+Our second two-sample test will be the Mann-Whitney U test (also called the Wilcoxon rank-sum test). The null hypothesis is:
+
+\begin{center}
+$H_{0}:$ both samples $x_{1},x_{2},..,x_{n}$ and $y_{1},y_{2},..,y_{m}$ come from the same distribution
+\end{center}
+
+(This is the same null hypothesis as for Kolmogorov-Smirnov) Furthermore, for a given level of significance $\alpha$, the test statistic is,
+
+$$
+\begin{split}
+U = min({U_{1}}{,U_{2}}) \\
+U_{1} = nm + \frac{n(n+1)}{2} - R_{1} \\
+U_{2} = nm + \frac{m(m+1)}{2} - R_{2}
+\end{split}
+$$
+
+where $R_{1}$ and $R_{2}$ are the adjusted rank-sums for the first and second sample respectively.
+
+The intuition behind the Mann-Whitney U test involves transforming the original nonparametric problem into one that can be solved using a parametric approach [10]. In particular, the test statistic $U$ above is known to be approximately normally distributed for large samples [11]. 
+
+Furthermore, an interpretation for $U$ the test statistic is that it reflects differences between rank totals for the two samples. Namely, the smaller the value of $U$ (with sample size taken into account) the more likely it is that the differences between rank totals are in fact significant [12]. In other words, under the null hypothesis $H_{0}$ we expect smaller values of $U$. 
+
+Moreover, similar to Kolmogorov-Smirnov two-sample test, the Mann-Whitney U test has the advantage of being nonparametric. In contrast, to the K-S test, however, the Mann-Whitney U test is mostly sensitive to differences in the median between two samples [9].
+
+\  
+
+\  
+
+\  
+
+We have now described all of the hypothesis tests that we will be used in the ensuing statistical analysis. In the next two sections, Section 6 and 7, we turn our attention back towards the overall goal of this project. Recall our aim is to **understand bike-hiring demand during peak commuting hours in the evening**. 
+
+With that said, let's move on to the statistical analysis. 
+
+## 6 Evening Peak Commuting Times, Part I: 
+## Testing for Normality
+
+In this section, we will focus on answering the question as to whether the distribution of bike hires during evening peak commuting times *follows a normal distribution*.
+
+To answer this question, we make some initial assumptions, before performing the hypothesis tests which we discussed in Section 4. 
+
+### 6.1 Initial Assumptions
+
+Firstly, we make an assumption about what is meant by "commuting times".
+
+- Assumption 1: Transport for London have explicitly said they're interested in "commuting times", therefore, we have made the assumption to filter our data to only include working days.
+
+To find the "peak commuting times in the evening", we aggregated the data by season and hour, to obtain the average bike-hiring counts *for every hour, for every season*. Visualizing:
+
+```{r, echo=FALSE, out.width="91%", fig.align="center"}
+# Aggregate Spring/Summer Hour data
+hourData %>% filter(workingday==1) %>% group_by(season, hr) %>% dplyr::summarise(mean_cnt = mean(cnt), median_cnt = median(cnt)) -> hourDataGrouped
+# Melt and make DataFrame ready for plotting
+df_hourDataMelted = melt(data.frame(hourDataGrouped), id=c("season","hr"))
+df_hourDataMelted$season <- as.factor(df_hourDataMelted$season)
+levels(df_hourDataMelted$season) <- c("Winter", "Spring", "Summer", "Fall")
+df_hourDataMelted <- df_hourDataMelted %>% mutate(spring = if_else(season == "Spring",1, 0))
+# Visualize average counts by season
+df_hourDataMelted %>% filter(variable=="mean_cnt", season %in% c("Spring", "Summer")) %>% arrange(spring) %>%
+ggplot(aes(hr,value)) +
+  geom_bar(aes(fill=season),stat='identity',position=position_identity()) + 
+  scale_fill_manual(values = c("olivedrab", "darkorange")) + 
+  labs(title = bold("Average Bike-hiring Count Vs. Time of Day")~" ", 
+       subtitle = italic("Working days over Spring and Summer (2011 and 2012)")~" ", 
+       x = "Hour (in the day)", 
+       y ="Mean Bike-hiring Count") +
+  geom_vline(xintercept = 16.5, colour="red", linetype = "longdash") +
+  geom_vline(xintercept = 20.5, colour="red", linetype = "longdash") +
+  annotate("text", x = 18.5, y = 580, label = "Evening Peak\nCommuting Times", size = 6)
+  # scale_x_continuous(breaks = scales::pretty_breaks(n = 20)) +
+  # annotate("segment", x = 19.5, xend = 17, y = 640, yend = 640, colour = "black", 
+  #          size = 1, arrow = arrow(length=unit(0.10,"cm"), type = "open")) + 
+  # annotate("text", x = 21, y = 660, label = "Summer Peak-hour") +
+  # annotate("segment", x = 19.5, xend = 17, y = 550, yend = 550, colour = "black", 
+  #          size = 1, arrow = arrow(length=unit(0.10,"cm"), type = "open")) + 
+  # annotate("text", x = 20.5, y = 570, label = "Spring Peak-hour")
+```
+
+We see that peak bike-hiring hours occur during the morning and the evening, as expected (i.e. when we expect lots of commuters to be travelling to and from work).
+
+Importantly, we're now able to make an assumption about what is meant by "peak commuting times in the evening".
+
+- Assumption 2: We have made the assumption to classify evening peak commuting times  as the hours between 5pm and 8pm. This interval is highlighted in the plot above. Here, note that another interval could have been used.^[We decided to use this interval in particular, however, since the graph above suggests these times are indeed "peak hours", and according to research 5pm-8pm is generally a well-accepted time interval for the evening [Ref]].
+
+### 6.2 What is the quantity of interest?
+
+To find any distribution, however, there needs to be a single quantity of interest. Therefore, our team has proposed to **take an average of the counts between 5pm-8pm for each day**, to help gauge the demand for a given evening, i.e. quantify the evening peak demand. In doing so, we have created a new 'Mean Evening Count' variable^[After much deliberation, our team decided this was a good approximation of general evening demand. If we were interested in modeling the distribution of the time in which the peak hour occurred each day, then taking the maximum evening count each day may have been more appropiate.].
+
+We can now view the distribution of "evening peak commuting times" or the 'Mean Evening Count' variable we have just defined. We have $n=120$ for Spring, and $n=128$ for Summer:
+
+```{r, echo=FALSE, out.width="91%", fig.align="center"}
+# # OLD EVENING COMMUTING TIMES PLOT
+# # Subset of the data (Working days, 17th-hour, Spring/Summer)
+# hourDataEveningSpring <- hourData %>% filter(workingday %in% c(1,0), hr %in% c(17,18,19,20), season==2) %>% group_by(dteday) %>% dplyr::summarise(mean_evening_cnt = mean(cnt))
+# hourDataEveningSummer <- hourData %>% filter(workingday %in% c(1,0), hr %in% c(17,18,19,20), season==3) %>% group_by(dteday) %>% dplyr::summarise(mean_evening_cnt = mean(cnt))
+# 
+# # Initialise list, to use grid.arrange
+# histArray = list()
+# 
+# # Visualize mean_evening_cnt distribution for Spring
+# histArray[[1]] = ggplot(hourDataEveningSpring, aes(x=mean_evening_cnt)) + 
+#   geom_histogram(binwidth=30,fill="olivedrab")
+# histArray[[2]] = ggplot(hourDataEveningSummer, aes(x=mean_evening_cnt)) + 
+#   geom_histogram(binwidth=40,fill="darkorange")
+# 
+# # Remove axis labels
+# p = histArray %>% map(~.x + labs(x=NULL, y=NULL))
+# 
+# grid.arrange(grobs=p, ncol = 2,
+#   top = textGrob(expression(bold('Distribution of "Evening Peak Commuting Times"'))),
+#   left = richtext_grob("Density", rot=90),
+#   bottom = richtext_grob("Mean Evening Count"))
+```
+
+```{r, echo=FALSE, out.width="91%", fig.align="center"}
+# Make DataFrame, re-factor and filter
+df_hourData <- data.frame(hourData)
+df_hourData$season <- as.factor(hourData$season)
+levels(df_hourData$season) <- c("Winter", "Spring","Summer","Fall")
+df_hourData <- df_hourData[c("season","yr","cnt","workingday", "hr","dteday")] %>% filter(workingday %in% c(1), hr %in% c(17,18,19,20), season %in% c("Spring","Summer")) %>% group_by(season, dteday) %>% dplyr::summarise(mean_evening_cnt = mean(cnt))
+# Change density plot fill colors by groups
+ggplot(df_hourData, aes(x=mean_evening_cnt, fill=season)) +
+  geom_density(alpha=0.3) + scale_fill_manual(values=c("olivedrab","darkorange")) + 
+  labs(title = bold('Distribution of "Evening Peak Commuting Times"')~" ", 
+       subtitle = italic("Working days over Spring and Summer (2011 and 2012)")~" ", 
+       x = "Mean Evening Count", y ="Density")
+```
+
+We observe Spring resembles a more symmetrical shape, while Summer appears to have more than one peak. Both seasons, however, do not appear to be smooth at first glance. 
+
+Recall the focus of this section was to evaluate whether the two distributions above are normally distributed. Hence, let's move on to testing for normality.  
+
+### 6.3 Hypothesis Testing for Normality
+
+Before considering more formal normality tests (Shapiro-Wilk and Anderson-Darling), let's examine the Normal Q-Q plots for the two distr Spring and Summer. 
+
+```{r, echo=FALSE, out.width="91%", fig.align="center"}
+df_hourDataSpring <- df_hourData %>% filter(season=="Spring")
+df_hourDataSummer <- df_hourData %>% filter(season=="Summer")
+qqArray = list()
+qqArray[[1]] = ggplot(data = df_hourDataSpring, aes(sample = mean_evening_cnt)) + 
+  geom_qq(color = "olivedrab") +
+  geom_qq_line(color = "olivedrab") +
+  labs(y = "Spring Data Quantiles ", x="Normal Theoretical Quantiles") 
+qqArray[[2]] = ggplot(data = df_hourDataSummer, aes(sample = mean_evening_cnt)) + 
+  geom_qq(color = "darkorange") +
+  geom_qq_line(color = "darkorange") +
+  labs(y = "Summer Data Quantiles ", x="Normal Theoretical Quantiles")
+grid.arrange(grobs=qqArray, ncol = 2,
+  top = textGrob(expression(bold('Normal Q-Q Plot: Distrbution of "Evening Peak Commuting Times"'))))
+```
+
+Q-Q plot commentary.
+
+```{r, echo=FALSE, results='hide'}
+shapiro.test(df_hourDataSpring$mean_evening_cnt)
+shapiro.test(df_hourDataSummer$mean_evening_cnt)
+ad.test(df_hourDataSpring$mean_evening_cnt)
+ad.test(df_hourDataSummer$mean_evening_cnt)
+```
+
+**Results:** 
+
+For both of the tests below, we have the following null and alternative hypothesis.
+
+**Shapiro-Wilk:** 
+
+- For Spring: $W = 0.98$, $p = 0.020 \therefore$ Reject $H_{0}$ 
+- For Summer: $W = 0.95$, $p = 0.00013 \therefore$  Reject $H_{0}$ 
+
+**Anderson-Darling:** 
+
+- For Spring: $A^2 = 0.71$, $p = 0.064 \therefore$  **Do not** reject $H_{0}$ 
+- For Summer: $A^2 = 2.5$, $p = 0.0000028 \therefore$ Reject $H_{0}$
+
+Hypothesis testing results commentary.
+
+## 7 Evening Peak Commuting Times, Part II: 
+## Do Spring and Summer come from the same distribution, or do they differ?
+
+###7.1 Introduction of the tests used 
+
+#### 7.1.1 Cucconi test
+
+The Cucconi test has the following test statistic
+
+*insert test statistic
+
+We prefer the Cucconi test over other tests such as Lepage test as the power result shows that it 
+
+###7.1.2 Kolmogorov_Smirnov two-sample test
+
+The Kolmogorov_Smirnov two-sample test examines whether or not two data samples are drawn from the same underlying distribution.
+
+The test statistic for this particular test is * test statistic*
+
+We prefer this test over the Mann-Whitney test as the K-S two-sample test is more powerful in detecting changes in the shape of the distributions.
+
+### 7.2 Comparison of the differences and similarities between the tests used
+
+###7.3 Results from the tests
+#### 7.3.1 Cucconi test
+
+#### 7.3.2 Kolmogorov_smirnov two-sample test
+The test statistic we obtained from the Kolmogorov_Smirnov two-sample test is 
+
+D=0.21577 \approx 0.2158
+Furthermore, the p value is 
+p-value =0.00482 < \alpha =0.05
+
+The p-value is less than the confidence level of 0.05 We conclude that at a 5% confidence level, we have enough evidence to reject the null hypothesis and thus concluce that the two samples are not drawn from the same distribution.
+
+## 8 Conclusion
+
+In order to conduct our analysis, we made a number of assumptions in our analysis that we should critically assess whether they are true or not. 
+
+In the instance of the K-S two-sample test. We have assumed that individual bike hires are mutually independent. This assumption may not be true given a groups of people, for example a family, might be travelling in packs and thus the bike hires might be mutually dependent.
+
+Despite these potential limitations in our assumptions, we still believe that our analysis has merit. 
+
+The recommendation that we would suggest to TFL would be to model the peak demand times in Spring and Summer separately. 
+
+
+
+Complete at the end. 
+
+## 9 References
+
+1. https://www.ons.gov.uk/peoplepopulationandcommunity/personalandhouseholdfinances/expenditure/articles/impactofincreasedcostoflivingonadultsacrossgreatbritain/junetoseptember2022#:~:text=According%20to%20our%20latest%20Public,living%20over%20the%20last%20month.
+
+2. https://blogs.lse.ac.uk/politicsandpolicy/why-have-energy-bills-in-the-uk-been-rising-net-zero/
+
+3. https://en.wikipedia.org/wiki/Q%E2%80%93Q_plot
+
+4. https://en.wikipedia.org/wiki/Shapiro%E2%80%93Wilk_test
+
+5. Inferential Statistics IV: Choosing a Hypothesis Test
+Andrew P. King, Robert J. Eckersley, in Statistics for Biomedical Engineers and Scientists, 2019
+
+6. Power comparisons of Shapiro-Wilk, Kolmogorov-Smirnov, Lilliefors and Anderson-Darling tests
+
+7. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6350423/
+
+
+8. https://www.itl.nist.gov/div898/handbook/eda/section3/eda35e.htm
+
+9. https://www.graphpad.com/guides/prism/latest/statistics/stat_choosing_between_the_mann-whit.htm
+
+10. Inferential Statistics III: Nonparametric Hypothesis Testing
+Andrew P. King, Robert J. Eckersley, in Statistics for Biomedical Engineers and Scientists, 2019
+
+11. https://en.wikipedia.org/wiki/Mann%E2%80%93Whitney_U_test
+
+12. http://users.sussex.ac.uk/~grahamh/RM1web/MannWhitneyHandout%202011.pdf
+
+## 9 References
+
+1. Office for National Statistics, (2022). Impact of increased cost of living on adults across Great Britain: June to September 2022 . [online] Available at: https://www.ons.gov.uk/peoplepopulationandcommunity/personalandhouseholdfinances/expenditure/articles [2022/11/24]
+
+2. LSE British Politics and Policy, (2022). Why have energy bills in the UK been rising?. [online] Available at: https://blogs.lse.ac.uk/politicsandpolicy/why-have-energy-bills-in-the-uk-been-rising-net-zero/ [2022/11/24].
+
+3. Wikipedia, (2022). Q–Q plot. [online] Available at: https://en.wikipedia.org/wiki/Q%E2%80%93Q_plot [2022/11/24].
+
+4. Wikipedia, (2022). Shapiro–Wilk test. [online] Available at: https://en.wikipedia.org/wiki/Shapiro%E2%80%93Wilk_test [2022/11/24].
+
+5. King, A., & Eckersley, R. (2019). Inferential Statistics IV: Choosing a Hypothesis Test. Statistics for Biomedical Engineers and Scientists: How to Visualize and Analyze Data, 147-171.
+
+6. Royston, P. (1993) A pocket-calculator algorithm for the shapiro-francia test for non-normality: An application to medicine. Statistics in medicine. [Online] 12 (2), 181–184.
+
+7. Mishra, P., Pandey, C. M., Singh, U., Gupta, A., Sahu, C., & Keshri, A. (2019). Descriptive statistics and normality tests for statistical data. Annals of cardiac anaesthesia, 22(1), 67–72. https://doi.org/10.4103/aca.ACA_157_18
+
+8. Royston, P. (1995) Remark AS R94: A Remark on Algorithm AS 181: The W-test for Normality. Applied Statistics. [Online] 44 (4), 547–551.
+
+9. Razali, N.M. and Wah, Y.B., 2011. Power comparisons of shapiro-wilk, kolmogorov-smirnov, lilliefors and anderson-darling tests. Journal of statistical modeling and analytics, 2(1), pp.21-33.
+
+10. Yazici, B. & Yolacan, S. (2007) A comparison of various tests of normality. Journal of statistical computation and simulation. [Online] 77 (2), 175–183.
+
+11. Stephens, M. A. (1974) EDF Statistics for Goodness of Fit and Some Comparisons. Journal of the American Statistical Association. [Online] 69 (347), 730–737.
+
+12. Marozzi, M. (2009) Some notes on the location-scale Cucconi test. Journal of nonparametric statistics. [Online] 21 (5), 629–647.
+
+13.Royston, P. (1995) Remark AS R94: A Remark on Algorithm AS 181: The W-test for Normality. Applied Statistics. [Online] 44 (4), 547–551.
